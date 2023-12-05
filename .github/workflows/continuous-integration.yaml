@@ -1,0 +1,52 @@
+name: continuous-integration
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  build-and-push:
+    name: build and push container image
+    runs-on: ubuntu-latest
+    
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: checkout source code
+        uses: actions/checkout@v4
+
+      - name: authenticate with repository
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: image metadata
+        uses: docker/metadata-action@v4
+        id: meta
+        with:
+          images: "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}"
+          tags: |
+            type=sha,prefix=sha-
+            type=ref,event=pr,prefix=pr-
+            type=ref,event=tag,prefix=tag-
+            type=raw,value=${{ github.run_id }},prefix=gh-
+            type=raw,value=${{ github.ref_name }}
+            type=raw,value=latest,enable=${{ github.ref_name == 'main' }}
+
+      - name: build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: server/
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
