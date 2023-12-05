@@ -1,5 +1,6 @@
 {
   "name": "@bookstore/server",
+  "description": "This is the server component for a bookstore application",
   "private": true,
   "scripts": {
     "start": "nest start",
